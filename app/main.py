@@ -16,6 +16,7 @@ DATABASE_URL = os.getenv(
 )
 
 engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
@@ -64,7 +65,7 @@ class UserCreate(BaseModel):
 @app.get("/")
 def root():
     return {
-        "message": "FastAPI + PostgreSQL is working"
+        "message": "CI/CD deployment is working successfully"
     }
 
 
