@@ -38,6 +38,7 @@ jobs:
       ECR_REPOSITORY: fastapi-cicd-project
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -80,3 +81,32 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to EC2 using SSM
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "i-0929fdbf42f4c4235" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 998127711669.dkr.ecr.us-east-1.amazonaws.com",
+              "docker pull 998127711669.dkr.ecr.us-east-1.amazonaws.com/fastapi-cicd-project:latest",
+              "docker stop fastapi-container || true",
+              "docker rm fastapi-container || true",
+              "docker run -d --name fastapi-container --network fastapi-network -p 8000:8000 -e DATABASE_URL=postgresql+psycopg://fastapi:fastapi_password@fastapi-postgres:5432/fastapi_db 998127711669.dkr.ecr.us-east-1.amazonaws.com/fastapi-cicd-project:latest",
+              "sleep 5",
+              "curl -f http://localhost:8000/health"
+            ]' \
+            --region us-east-1 \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-0929fdbf42f4c4235"
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-0929fdbf42f4c4235"
