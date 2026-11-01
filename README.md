@@ -1,379 +1,140 @@
-# 🚀 FastAPI Cloud-Native DevSecOps Platform
+# 🚀 FastAPI CI/CD | DevOps & DevSecOps Project
 
-A backend application built with **FastAPI, PostgreSQL, Docker, Pytest, Git, GitHub, and GitHub Actions**.
-
-The project demonstrates a basic production-style backend workflow from application development and database integration to containerization, automated testing, and Continuous Integration.
-
----
+A **production-style FastAPI backend** with **PostgreSQL, Docker, GitHub Actions CI/CD, and AWS cloud deployment**. The project demonstrates automated testing, containerization, secure AWS authentication, and automated deployment to EC2.
 
 ## 🛠️ Tech Stack
 
-- **Python 3.12**
-- **FastAPI**
-- **Uvicorn**
-- **PostgreSQL 16**
-- **SQLAlchemy**
-- **Pydantic**
-- **Pytest**
-- **HTTPX**
-- **Docker**
-- **Docker Compose**
-- **Git**
-- **GitHub**
-- **GitHub Actions**
+**Backend:** Python, FastAPI, REST API, SQLAlchemy  
+**Database:** PostgreSQL  
+**Testing:** Pytest  
+**Containerization:** Docker  
+**CI/CD:** GitHub Actions  
+**AWS:** EC2, ECR, SSM, IAM  
+**Security:** GitHub OIDC, IAM Roles  
+**Server:** Uvicorn, Linux
 
----
-
-## 📌 Features
-
-### FastAPI Backend
-
-The application provides a REST API for managing users.
-
-Implemented endpoints:
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Application health/message |
-| POST | `/users` | Create a user |
-| GET | `/users` | Get all users |
-| GET | `/users/{user_id}` | Get user by ID |
-| PUT | `/users/{user_id}` | Update user |
-| DELETE | `/users/{user_id}` | Delete user |
-
----
-
-## 🗄️ PostgreSQL Database
-
-The application uses **PostgreSQL** as the database.
-
-Implemented:
-
-- SQLAlchemy ORM
-- User database model
-- Unique email constraint
-- Database session management
-- FastAPI database dependency
-- PostgreSQL running through Docker Compose
-
-### User Model
+## 🏗️ Architecture
 
 ```text
-User
-├── id
-├── name
-└── email
-```
-
----
-
-## ✅ Validation & Error Handling
-
-The API includes:
-
-- Pydantic request validation
-- Email validation
-- Duplicate email protection
-- `404` handling when a user does not exist
-- Appropriate HTTP status codes
-
-Example:
-
-```text
-POST /users
-    ↓
-Check existing email
-    ↓
-Create user
-    ↓
-Save to PostgreSQL
-    ↓
-Return created user
-```
-
----
-
-## 🐳 Docker
-
-The application is containerized using Docker.
-
-Docker Compose runs:
-
-```text
-FastAPI
+Developer
    │
    ▼
-PostgreSQL
+GitHub Repository
+   │
+   ▼
+GitHub Actions
+   │
+   ├── Pytest
+   ├── Docker Build
+   ├── AWS OIDC Authentication
+   └── Push Image → Amazon ECR
+                         │
+                         ▼
+                    AWS SSM
+                         │
+                         ▼
+                    Amazon EC2
+                         │
+                         ▼
+                 FastAPI Container
+                         │
+                         ▼
+                    PostgreSQL
 ```
 
-### Services
+## ⚡ Key Features
+
+- Developed **RESTful CRUD APIs** using FastAPI and Python
+- Integrated **PostgreSQL** using SQLAlchemy
+- Containerized application using **Docker**
+- Implemented automated **CI/CD pipeline with GitHub Actions**
+- Automated **Pytest** execution before deployment
+- Built and pushed Docker images to **Amazon ECR**
+- Automated EC2 deployment using **AWS Systems Manager (SSM)**
+- Implemented **GitHub OIDC + AWS IAM Roles** for secure authentication
+- Added automated **post-deployment health checks**
+- Eliminated manual SSH-based deployment from the CI/CD workflow
+
+## 🔄 CI/CD Pipeline
 
 ```text
-fastapi-container
-fastapi-postgres
+Code Push
+   ↓
+GitHub Actions
+   ↓
+Automated Tests
+   ↓
+Docker Build
+   ↓
+Amazon ECR
+   ↓
+AWS SSM
+   ↓
+Amazon EC2
+   ↓
+Container Deployment
+   ↓
+Health Check ✅
 ```
 
-FastAPI runs on:
+**Deployment is performed automatically only after successful tests.**
 
-```text
-http://localhost:8000
-```
-
-PostgreSQL is exposed locally on:
-
-```text
-localhost:5433
-```
-
-Inside the Docker Compose network, FastAPI connects to PostgreSQL using:
-
-```text
-postgres:5432
-```
-
----
-
-## 📦 Docker Compose
-
-The project uses a persistent PostgreSQL Docker volume.
-
-Start the application:
+## 🧪 Testing
 
 ```bash
-docker compose up -d --build
+pytest
 ```
-
-Check containers:
-
-```bash
-docker ps
-```
-
-Stop containers:
-
-```bash
-docker compose down
-```
-
-View FastAPI logs:
-
-```bash
-docker logs fastapi-container
-```
-
----
-
-## 📖 API Documentation
-
-FastAPI automatically provides interactive API documentation.
-
-### Swagger UI
-
-```text
-http://localhost:8000/docs
-```
-
-### ReDoc
-
-```text
-http://localhost:8000/redoc
-```
-
----
-
-## 🧪 Automated Testing
-
-The project uses **Pytest** for API testing.
 
 Current test coverage includes:
 
-- Root endpoint
-- Get users
-- Create user
-- Get user by ID
-- User not found
-- Update user
-- Delete user
-- Duplicate email validation
+- API health checks
+- CRUD operations
+- User validation
+- Duplicate email handling
+- Error handling
 
-Run tests:
+**Test Result: 9 passed ✅**
 
-```bash
-pytest
-```
+## 📡 API
 
-Current result:
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Application status |
+| GET | `/health` | Health check |
+| GET | `/users` | Get users |
+| POST | `/users` | Create user |
+| GET | `/users/{id}` | Get user |
+| PUT | `/users/{id}` | Update user |
+| DELETE | `/users/{id}` | Delete user |
 
-```text
-8 passed
-```
-
----
-
-## 🔄 GitHub Actions CI
-
-The project includes a GitHub Actions workflow:
+Interactive API documentation:
 
 ```text
-.github/workflows/ci.yml
+http://<EC2-PUBLIC-IP>:8000/docs
 ```
 
-The CI workflow runs when code is:
+## 🔐 DevSecOps Practices
 
-- Pushed to `main`
-- Submitted as a Pull Request to `main`
+- **AWS IAM** for least-privilege access
+- **GitHub OIDC** instead of long-lived AWS credentials
+- Automated testing before deployment
+- Containerized deployment
+- AWS SSM instead of direct SSH deployment
 
-### Current CI Pipeline
+## 📈 Future Improvements
 
-```text
-Git Push / Pull Request
-          ↓
-   GitHub Actions
-          ↓
-   Checkout Code
-          ↓
-   Setup Python 3.12
-          ↓
- Install Dependencies
-          ↓
-       Pytest
-          ↓
-      Test Result
-```
-
-The purpose of the CI pipeline is to automatically run the test suite whenever changes are pushed to GitHub.
-
----
-
-## 📁 Project Structure
-
-```text
-Fastapi-CICD-Project/
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-│
-├── app/
-│   ├── __init__.py
-│   ├── database.py
-│   ├── dependencies.py
-│   ├── main.py
-│   ├── models.py
-│   └── schemas.py
-│
-├── tests/
-│   ├── __init__.py
-│   └── test_main.py
-│
-├── .dockerignore
-├── .gitignore
-├── docker-compose.yml
-├── Dockerfile
-├── README.md
-└── requirements.txt
-```
-
----
-
-## ⚙️ Local Setup
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/mukeshsharma99/Fastapi-CICD-Project.git
-```
-
-```bash
-cd Fastapi-CICD-Project
-```
-
-### 2. Create virtual environment
-
-```bash
-python -m venv .venv
-```
-
-### 3. Activate virtual environment
-
-Windows:
-
-```bash
-.venv\Scripts\activate
-```
-
-### 4. Install dependencies
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### 5. Start with Docker Compose
-
-```bash
-docker compose up -d --build
-```
-
-### 6. Open Swagger
-
-```text
-http://localhost:8000/docs
-```
-
-### 7. Run tests
-
-```bash
-pytest
-```
-
----
-
-## 🔐 Configuration
-
-The application supports the `DATABASE_URL` environment variable.
-
-### Local Development
-
-```text
-postgresql+psycopg://fastapi:fastapi_password@localhost:5433/fastapi_db
-```
-
-### Docker Compose
-
-```text
-postgresql+psycopg://fastapi:fastapi_password@postgres:5432/fastapi_db
-```
-
-This allows the same FastAPI application to work with different database connection settings depending on the environment.
-
----
-
-## 📋 Current Project Status
-
-### Completed
-
-- [x] FastAPI application
-- [x] PostgreSQL integration
-- [x] SQLAlchemy ORM
-- [x] User CRUD API
-- [x] Pydantic validation
-- [x] Error handling
-- [x] Dockerfile
-- [x] Docker Compose
-- [x] PostgreSQL persistent volume
-- [x] Pytest test suite
-- [x] 8 automated tests passing
-- [x] Git repository
-- [x] GitHub repository
-- [x] GitHub Actions CI
-- [x] Automated testing through GitHub Actions
-
----
+- Trivy container vulnerability scanning
+- SonarQube code quality analysis
+- AWS Secrets Manager
+- CloudWatch monitoring and logging
+- HTTPS with Application Load Balancer
+- Terraform Infrastructure as Code
+- Automated rollback
 
 ## 👨‍💻 Author
 
 **Mukesh Sharma**
 
-GitHub:
+**Software Developer | Backend | DevOps | Cloud | AI/ML**
 
-https://github.com/mukeshsharma99
+GitHub: [mukeshsharma99](https://github.com/mukeshsharma99)
