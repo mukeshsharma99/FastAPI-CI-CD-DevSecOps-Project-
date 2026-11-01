@@ -1,3 +1,4 @@
+```python
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -12,6 +13,15 @@ def test_root():
     assert response.status_code == 200
     assert response.json() == {
         "message": "FastAPI + PostgreSQL is working"
+    }
+
+
+def test_health():
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "healthy"
     }
 
 
