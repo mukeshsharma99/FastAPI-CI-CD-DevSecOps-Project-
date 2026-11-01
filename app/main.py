@@ -1,170 +1,156 @@
-from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy.orm import Session
+```python
+from fastapi.testclient import TestClient
 
-from . import models
-from .database import Base, engine
-from .dependencies import get_db
-from .schemas import UserCreate, UserUpdate, UserResponse
+from app.main import app
 
 
-app = FastAPI(
-    title="FastAPI Cloud-Native DevSecOps Platform",
-    description="Production-ready FastAPI backend with PostgreSQL, Docker, CI/CD, AWS deployment, and DevSecOps practices.",
-    version="1.0.0"
-)
+client = TestClient(app)
 
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+def test_root():
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "FastAPI + PostgreSQL is working"
+    }
 
 
-# -------------------------
-# ROOT
-# -------------------------
+def test_health():
+    response = client.get("/health")
 
-@app.get("/")
-def root():
-    return {"message": "FastAPI + PostgreSQL is working"}
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "healthy"
+    }
 
 
-# -------------------------
-# CREATE USER
-# -------------------------
+def test_get_users():
+    response = client.get("/users")
 
-@app.post("/users", response_model=UserResponse, status_code=201)
-def create_user(
-    user: UserCreate,
-    db: Session = Depends(get_db)
-):
-    # Check if email already exists
-    existing_user = (
-        db.query(models.User)
-        .filter(models.User.email == user.email)
-        .first()
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_create_user():
+    response = client.post(
+        "/users",
+        json={
+            "name": "Test User",
+            "email": "pytest_create_101@example.com"
+        }
     )
 
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
-        )
+    assert response.status_code == 201
 
-    new_user = models.User(
-        name=user.name,
-        email=user.email,
+    data = response.json()
+
+    assert data["name"] == "Test User"
+    assert data["email"] == "pytest_create_101@example.com"
+    assert "id" in data
+
+
+def test_get_user_by_id():
+    response = client.post(
+        "/users",
+        json={
+            "name": "Get Test User",
+            "email": "pytest_get_102@example.com"
+        }
     )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    assert response.status_code == 201
 
-    return new_user
+    user_id = response.json()["id"]
 
+    response = client.get(f"/users/{user_id}")
 
-# -------------------------
-# GET ALL USERS
-# -------------------------
-
-@app.get("/users", response_model=list[UserResponse])
-def get_users(
-    db: Session = Depends(get_db)
-):
-    return db.query(models.User).all()
+    assert response.status_code == 200
+    assert response.json()["id"] == user_id
+    assert response.json()["name"] == "Get Test User"
+    assert response.json()["email"] == "pytest_get_102@example.com"
 
 
-# -------------------------
-# GET USER BY ID
-# -------------------------
+def test_get_user_not_found():
+    response = client.get("/users/999999")
 
-@app.get("/users/{user_id}", response_model=UserResponse)
-def get_user(
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    user = (
-        db.query(models.User)
-        .filter(models.User.id == user_id)
-        .first()
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
+
+
+def test_update_user():
+    response = client.post(
+        "/users",
+        json={
+            "name": "Before Update",
+            "email": "pytest_update_103@example.com"
+        }
     )
 
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
+    assert response.status_code == 201
 
-    return user
+    user_id = response.json()["id"]
 
-
-# -------------------------
-# UPDATE USER
-# -------------------------
-
-@app.put("/users/{user_id}", response_model=UserResponse)
-def update_user(
-    user_id: int,
-    user_data: UserUpdate,
-    db: Session = Depends(get_db)
-):
-    user = (
-        db.query(models.User)
-        .filter(models.User.id == user_id)
-        .first()
+    response = client.put(
+        f"/users/{user_id}",
+        json={
+            "name": "After Update",
+            "email": "pytest_updated_104@example.com"
+        }
     )
 
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
+    assert response.status_code == 200
 
-    # Check whether another user already has this email
-    existing_user = (
-        db.query(models.User)
-        .filter(
-            models.User.email == user_data.email,
-            models.User.id != user_id
-        )
-        .first()
+    data = response.json()
+
+    assert data["id"] == user_id
+    assert data["name"] == "After Update"
+    assert data["email"] == "pytest_updated_104@example.com"
+
+
+def test_delete_user():
+    response = client.post(
+        "/users",
+        json={
+            "name": "Delete Test User",
+            "email": "pytest_delete_105@example.com"
+        }
     )
 
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
-        )
+    assert response.status_code == 201
 
-    user.name = user_data.name
-    user.email = user_data.email
+    user_id = response.json()["id"]
 
-    db.commit()
-    db.refresh(user)
+    response = client.delete(f"/users/{user_id}")
 
-    return user
+    assert response.status_code == 200
+    assert response.json()["message"] == "User deleted successfully"
+
+    response = client.get(f"/users/{user_id}")
+
+    assert response.status_code == 404
 
 
-# -------------------------
-# DELETE USER
-# -------------------------
+def test_duplicate_email():
+    email = "pytest_duplicate_106@example.com"
 
-@app.delete("/users/{user_id}")
-def delete_user(
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    user = (
-        db.query(models.User)
-        .filter(models.User.id == user_id)
-        .first()
+    response = client.post(
+        "/users",
+        json={
+            "name": "First User",
+            "email": email
+        }
     )
 
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
+    assert response.status_code == 201
 
-    db.delete(user)
-    db.commit()
+    response = client.post(
+        "/users",
+        json={
+            "name": "Second User",
+            "email": email
+        }
+    )
 
-    return {"message": "User deleted successfully"}
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Email already registered"
